@@ -1,6 +1,6 @@
 ## About
 
-This is a really simple implementation of what I'd like a real interactive mode for rust to look like. You can enter statements (right now, use, import, fn declarations, and any expression) and it will evaluate the output. 
+This is a really simple implementation of what I'd like a real interactive mode for rust to look like. You can enter statements (right now, use, import, fn declarations, and any expression) and it will evaluate the output. The way it is actually implemented is a hack - it stores view items (use and import), declarations (let and fn) and a statement (which is updated as you go). It then writes them to a file, compiles that, and runs it. If it encounters an error compiling, it shows just that error. It actually works surprisingly well.
 
 ## Example session
 
@@ -27,7 +27,11 @@ This is a really simple implementation of what I'd like a real interactive mode 
 
 ## What it's missing
 
-Right now the major thing is readline support. Then doing this properly, and finally, tab completion, etc.
+Right now the major thing is readline support. Then doing this properly (see, Future), and finally, tab completion, etc.
 
-## Support
+## Future
+
+Ideally this can be rewritten to use LLVM's ExecutionEngine (interpreter / JIT). I tried that first, but don't know enough about the compiler to not end up in LLVM segfaults. So I instead just took the interface that I had sketched out for a proper interpreter, and hacked it together. And it works surprisingly well!
+
+## Platform support
 Right now it is *nix only, just because of finding a temporary directory. I'm in the process of adding a os::tmpdir() function to the core lib, so once that lands, I can redo this to be cross platform.
