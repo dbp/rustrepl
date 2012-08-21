@@ -1,3 +1,5 @@
+#[link(name = "rustrepl", vers = "0.1", author = "dbp")];
+
 use std;
 
 import std::tempfile;
@@ -43,8 +45,9 @@ fn handle_command(c: char, rest: ~str, path: ~str) {
         'w' => {
             let new_path = str::trim(rest);
             // pretty print the output
-            let out = run::program_output(~"rustc", ~[~"--pretty", ~"normal", 
-                                                      fmt!("%s/sess.rs", path)]);
+            let out = run::program_output(~"rustc", 
+                                          ~[~"--pretty", ~"normal", 
+                                            fmt!("%s/sess.rs", path)]);
             let out_path = fmt!("%s/out.rs", path);
             if os::path_exists(out_path) {
                 os::remove_file(out_path);
@@ -61,12 +64,16 @@ fn handle_command(c: char, rest: ~str, path: ~str) {
         }
         'h' => {
             io::println("about:");
-            io::println("this is a very simple repl for rust. type in expressions to evaluate,");
-            io::println("let statements to make local definitions, import and use statements, and ");
-            io::println("fn statements to define functions. don't add trailing semis!");
+            io::println("this is a very simple repl for rust. type in \
+                         expressions to evaluate,");
+            io::println("let statements to make local definitions, import \
+                         and use statements, and ");
+            io::println("fn statements to define functions. don't add \
+                         trailing semis!");
             io::println("commands:");
             io::println(":w filename.rs - write current session to file.");
-            io::println(":l filename.rs - load session from file - will erase current session. (not yet implemented)");
+            io::println(":l filename.rs - load session from file - will erase \
+                         current session. (not yet implemented)");
             io::println(":h - this message.")
         }
         _ => {
@@ -81,10 +88,10 @@ fn main() {
     if option::is_none(p) {
         fail ~"could not create temporary directory";
     }
-    let path = option::unwrap(p);
+    let tmppath = option::unwrap(p);
 
-    io::println("repl for rust, 0.1. *nix only, for now (b/c of tmpdirs). don't add semis.");
-    io::println(":h for help");
+    io::println("repl for rust, 0.1. *nix only, for now (b/c of tmpdirs).");
+    io::println("don't use trailing semicolons. :h for help");
 
     let mut session = {view_items: ~[], definitions: ~[], stmt: ~""};
     loop {
@@ -104,7 +111,7 @@ fn main() {
         if input[0] == ':' as u8 {
             handle_command(input[1] as char, if str::len(input) > 3 {
                     str::slice(input, 3, str::len(input))
-                } else {~""}, path);
+                } else {~""}, tmppath);
         } else {
             let view_pop;
             let def_pop;
@@ -112,12 +119,14 @@ fn main() {
         
             let mut run = false; // should we run, ie, has stmt changed
         
-            if str::starts_with(input, ~"use ") || str::starts_with(input, ~"import ") {
+            if str::starts_with(input, ~"use ") || 
+               str::starts_with(input, ~"import ") {
                 vec::push(session.view_items, input);
                 view_pop = true;
                 def_pop = false;
                 stmt_pop = ~"";
-            } else if str::starts_with(input, ~"fn ") || str::starts_with(input, ~"let ") {
+            } else if str::starts_with(input, ~"fn ") || 
+                      str::starts_with(input, ~"let ") {
                 vec::push(session.definitions, input);
                 view_pop = false;
                 def_pop = true;
@@ -130,9 +139,10 @@ fn main() {
                 session.stmt = input;
             }
         
-            if check_session(session, path) {
+            if check_session(session, tmppath) {
                 if run {
-                    let res = run::program_output(fmt!("%s/sess", path), ~[]);
+                    let res = run::program_output(fmt!("%s/sess", tmppath),
+                                                  ~[]);
                     io::print(res.out);
                 }
             } else {
@@ -147,4 +157,6 @@ fn main() {
         }
 
     }
+    // clean up tmp stuff. we want recursive, so call out to system.
+    run::program_output(~"rm", ~[~"-R", tmppath]);
 }
