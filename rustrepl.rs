@@ -25,8 +25,8 @@ fn write_session(s: abstr_session, path: ~str) {
     w.write_line(~"\n}\n")
 }
 
-fn check_session(s: abstr_session, path: ~str) -> bool {
-    let path = fmt!("%s/sess.rs", path);
+fn check_session(s: abstr_session, tmppath: ~str) -> bool {
+    let path = fmt!("%s%ssess.rs", tmppath, path::path_sep());
     write_session(s, path);
     let out = run::program_output(~"rustc", ~[path]);
     match out.status {
@@ -40,22 +40,23 @@ fn check_session(s: abstr_session, path: ~str) -> bool {
     }
 }
 
-fn handle_command(c: char, rest: ~str, path: ~str) {
+fn handle_command(c: char, rest: ~str, tmppath: ~str) {
     match c {
         'w' => {
             let new_path = str::trim(rest);
             // pretty print the output
             let out = run::program_output(~"rustc", 
                                           ~[~"--pretty", ~"normal", 
-                                            fmt!("%s/sess.rs", path)]);
-            let out_path = fmt!("%s/out.rs", path);
+                                            fmt!("%s%ssess.rs", tmppath, 
+                                                 path::path_sep())]);
+            let out_path = fmt!("%s%sout.rs", tmppath, path::path_sep());
             if os::path_exists(out_path) {
                 os::remove_file(out_path);
             }
             let w = result::get(io::file_writer(out_path, ~[io::Create]));
             w.write_str(out.out);
             if !os::copy_file(out_path, new_path) {
-                io::println(fmt!("could not write to %s.", path));
+                io::println(fmt!("could not write to %s.", new_path));
 
             }
         }
@@ -84,7 +85,7 @@ fn handle_command(c: char, rest: ~str, path: ~str) {
 
 fn main() {
     // set up working directory
-    let p = tempfile::mkdtemp(~"/tmp/", ~"repl");
+    let p = tempfile::mkdtemp(os::tmpdir(), ~"repl");
     if option::is_none(p) {
         fail ~"could not create temporary directory";
     }
@@ -141,7 +142,8 @@ fn main() {
         
             if check_session(session, tmppath) {
                 if run {
-                    let res = run::program_output(fmt!("%s/sess", tmppath),
+                    let res = run::program_output(fmt!("%s%ssess", tmppath, 
+                                                       path::path_sep()),
                                                   ~[]);
                     io::print(res.out);
                 }
@@ -158,5 +160,14 @@ fn main() {
 
     }
     // clean up tmp stuff. we want recursive, so call out to system.
+    remove_tmpdir(tmppath);
+}
+
+#[cfg(unix)]
+fn remove_tmpdir(tmppath: ~str) {
     run::program_output(~"rm", ~[~"-R", tmppath]);
+}
+#[cfg(windows)]
+fn remove_tmpdir(tmppath: ~str) {
+    run::program_output(~"rd", ~[~"/S", ~"/Q", tmppath]);
 }
