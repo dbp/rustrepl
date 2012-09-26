@@ -1,17 +1,17 @@
-#[link(name = "rustrepl", vers = "0.1", author = "dbp")];
+#[link(name = "rustrepl", vers = "0.2", author = "dbp")];
 
-use std;
+extern mod std;
 
-import std::tempfile;
-import io::WriterUtil;
+use std::tempfile;
+use io::WriterUtil;
 
-type abstr_session = {view_items: ~[~str], definitions: ~[~str], stmt: ~str};
+type AbstrSession = {view_items: ~[~str], definitions: ~[~str], stmt: ~str};
 
-fn write_session(s: abstr_session, path: ~str) {
-    if os::path_exists(path) {
-        os::remove_file(path);
+fn write_session(s: AbstrSession, path: path::Path) {
+    if os::path_exists(&path) {
+        os::remove_file(&path);
     }
-    let w = result::get(io::file_writer(path, ~[io::Create]));
+    let w = result::get(&(io::file_writer(&path, ~[io::Create])));
     for vec::each(s.view_items) |i| {
         w.write_line(i+~";");
     }
@@ -25,38 +25,37 @@ fn write_session(s: abstr_session, path: ~str) {
     w.write_line(~"\n}\n")
 }
 
-fn check_session(s: abstr_session, tmppath: ~str) -> bool {
-    let path = fmt!("%s%ssess.rs", tmppath, path::path_sep());
-    write_session(s, path);
-    let out = run::program_output(~"rustc", ~[path]);
+fn check_session(s: AbstrSession, tmppath: path::Path) -> bool {
+    let path = tmppath.push("sess.rs");
+    write_session(s, copy path);
+    let out = run::program_output(~"rustc", ~[path.to_str()]);
     match out.status {
         0 => { return true; }
         _ => {
             let fst = copy str::split_char(out.err, '\n')[0];
-            let err_indx = option::get(str::find_str(fst, ~"error:"));
+            let err_indx = option::get(&(str::find_str(fst, ~"error:")));
             io::println(str::slice(fst, err_indx, str::len(fst)));
             return false;
         }
     }
 }
 
-fn handle_command(c: char, rest: ~str, tmppath: ~str) {
+fn handle_command(c: char, rest: ~str, tmppath: path::Path) {
     match c {
         'w' => {
-            let new_path = str::trim(rest);
+            let new_path = path::from_str(str::trim(rest));
             // pretty print the output
             let out = run::program_output(~"rustc", 
                                           ~[~"--pretty", ~"normal", 
-                                            fmt!("%s%ssess.rs", tmppath, 
-                                                 path::path_sep())]);
-            let out_path = fmt!("%s%sout.rs", tmppath, path::path_sep());
-            if os::path_exists(out_path) {
-                os::remove_file(out_path);
+                                            tmppath.push("sess.rs").to_str()]);
+            let out_path = tmppath.push("out.rs");
+            if os::path_exists(&out_path) {
+                os::remove_file(&out_path);
             }
-            let w = result::get(io::file_writer(out_path, ~[io::Create]));
+            let w = result::get(&(io::file_writer(&out_path, ~[io::Create])));
             w.write_str(out.out);
-            if !os::copy_file(out_path, new_path) {
-                io::println(fmt!("could not write to %s.", new_path));
+            if !os::copy_file(&out_path, &new_path) {
+                io::println(fmt!("could not write to %s.", new_path.to_str()));
 
             }
         }
@@ -75,7 +74,7 @@ fn handle_command(c: char, rest: ~str, tmppath: ~str) {
             io::println(":w filename.rs - write current session to file.");
             io::println(":l filename.rs - load session from file - will erase \
                          current session. (not yet implemented)");
-            io::println(":h - this message.")
+            io::println(":h - this message.");
         }
         _ => {
             io::println("unknown command. :h for help.");
@@ -85,34 +84,34 @@ fn handle_command(c: char, rest: ~str, tmppath: ~str) {
 
 fn main() {
     // set up working directory
-    let p = tempfile::mkdtemp(os::tmpdir(), ~"repl");
-    if option::is_none(p) {
+    let p = tempfile::mkdtemp(&(os::tmpdir()), ~"repl");
+    if option::is_none(&p) {
         fail ~"could not create temporary directory";
     }
     let tmppath = option::unwrap(p);
 
-    io::println("repl for rust, 0.1. *nix only, for now (b/c of tmpdirs).");
-    io::println("don't use trailing semicolons. :h for help");
+    io::println("repl for rust, 0.2.");
+    io::println("don't use trailing semicolons. :h for help, Ctrl-D to quit.");
 
     let mut session = {view_items: ~[], definitions: ~[], stmt: ~""};
     loop {
         let stdin = io::stdin();
 
         io::print("rust> ");
-        let raw_input = stdin.read_line();
+        let raw_input = (stdin as io::ReaderUtil).read_line();
         if str::is_empty(raw_input) {
             if stdin.eof() {
                 io::println("");
                 break;
             }
-            again;
+            loop;
         }
         let input = str::trim(raw_input);
 
         if input[0] == ':' as u8 {
             handle_command(input[1] as char, if str::len(input) > 3 {
                     str::slice(input, 3, str::len(input))
-                } else {~""}, tmppath);
+                } else {~""}, copy tmppath);
         } else {
             let view_pop;
             let def_pop;
@@ -140,11 +139,10 @@ fn main() {
                 session.stmt = input;
             }
         
-            if check_session(session, tmppath) {
+            if check_session(copy session, copy tmppath) {
                 if run {
-                    let res = run::program_output(fmt!("%s%ssess", tmppath, 
-                                                       path::path_sep()),
-                                                  ~[]);
+                    let sess = tmppath.push("sess");
+                    let res = run::program_output(sess.to_str(), ~[]);
                     io::print(res.out);
                 }
             } else {
@@ -164,10 +162,10 @@ fn main() {
 }
 
 #[cfg(unix)]
-fn remove_tmpdir(tmppath: ~str) {
-    run::program_output(~"rm", ~[~"-R", tmppath]);
+fn remove_tmpdir(tmppath: Path) {
+    run::program_output(~"rm", ~[~"-R", tmppath.to_str()]);
 }
 #[cfg(windows)]
-fn remove_tmpdir(tmppath: ~str) {
-    run::program_output(~"rd", ~[~"/S", ~"/Q", tmppath]);
+fn remove_tmpdir(tmppath: Path) {
+    run::program_output(~"rd", ~[~"/S", ~"/Q", tmppath.to_str()]);
 }
