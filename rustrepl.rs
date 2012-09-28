@@ -120,7 +120,7 @@ fn main() {
             let mut run = false; // should we run, ie, has stmt changed
         
             if str::starts_with(input, ~"use ") || 
-               str::starts_with(input, ~"import ") {
+               str::starts_with(input, ~"extern mod ") {
                 vec::push(session.view_items, input);
                 view_pop = true;
                 def_pop = false;
