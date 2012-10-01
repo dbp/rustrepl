@@ -5,7 +5,7 @@ extern mod std;
 use std::tempfile;
 use io::WriterUtil;
 
-type AbstrSession = {view_items: ~[~str], definitions: ~[~str], stmt: ~str};
+struct AbstrSession {mut view_items: ~[~str], mut definitions: ~[~str], mut stmt: ~str}
 
 fn write_session(s: AbstrSession, path: path::Path) {
     if os::path_exists(&path) {
@@ -93,7 +93,7 @@ fn main() {
     io::println("repl for rust, 0.2.");
     io::println("don't use trailing semicolons. :h for help, Ctrl-D to quit.");
 
-    let mut session = {view_items: ~[], definitions: ~[], stmt: ~""};
+    let mut session = AbstrSession {view_items: ~[], definitions: ~[], stmt: ~""};
     loop {
         let stdin = io::stdin();
 
@@ -121,13 +121,13 @@ fn main() {
         
             if str::starts_with(input, ~"use ") || 
                str::starts_with(input, ~"extern mod ") {
-                vec::push(session.view_items, input);
+                session.view_items.push(input);
                 view_pop = true;
                 def_pop = false;
                 stmt_pop = ~"";
             } else if str::starts_with(input, ~"fn ") || 
                       str::starts_with(input, ~"let ") {
-                vec::push(session.definitions, input);
+                session.definitions.push(input);
                 view_pop = false;
                 def_pop = true;
                 stmt_pop = ~"";
@@ -147,10 +147,10 @@ fn main() {
                 }
             } else {
                 if view_pop {
-                    vec::pop(session.view_items);
+                    session.view_items.pop();
                 }
                 if def_pop {
-                    vec::pop(session.definitions);
+                    session.definitions.pop();
                 }
                 session.stmt = stmt_pop;
             }
