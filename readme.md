@@ -25,9 +25,9 @@ This is a really simple implementation of what I'd like a real interactive mode 
     rust> (a as float)/2.0
     11.5
 
-## What it's missing
+## Readline
 
-Right now the major thing is readline support. Then doing this properly (see, Future), and finally, tab completion, etc.
+It is really convenient to be able to move around the line (ie, back arrow to correct, move to the beginning / end) to edit it. This can be accomplished with the readline library, which, if this were anything but a hack, would eventually be integrated. But, in the spirit of this being a hack, you can install a wrapper (ie, rlwrap), and then run the repl like: `rlwrap rustrepl` and get readline support. 
 
 ## Future
 
