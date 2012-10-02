@@ -31,4 +31,4 @@ Right now the major thing is readline support. Then doing this properly (see, Fu
 
 ## Future
 
-Ideally this can be rewritten to use LLVM's ExecutionEngine (interpreter / JIT). I tried that first, but don't know enough about the compiler to not end up in LLVM segfaults. So I instead just took the interface that I had sketched out for a proper interpreter, and hacked it together. If someone who understands the compiler internals wants to give me some guidance as to where to start, I'd love to work on doing this properly (for reference, my attempt started by trying to compile code to an llvm module using the code in rustc/driver/driver.rs, and then handing the ModuleRef to the ExecutionEngine and calling _rust_main).
+The way forward for this is here: https://github.com/z0w0/rust-repl. This is a JIT based approach that should (eventually) function better than this does, and more importantly, be much faster (and eventually provide more features, like type inspection, etc). Right now, it is pretty rough, I believe, but it is improving rapidly!
